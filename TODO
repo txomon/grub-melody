@@ -1,0 +1,9 @@
+## Todo file for grub-melody ##
+
+There will be 2 methods, providing a 
+
+## grub-melody.sh ##
+It is the main program, although it possibly will be the only piece of code, is supposed
+to be the one that calls all the other functions.
+
+The main problem is that the most complex function is the one that interprets abc notation.
