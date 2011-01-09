@@ -7,3 +7,10 @@ It is the main program, although it possibly will be the only piece of code, is 
 to be the one that calls all the other functions.
 
 The main problem is that the most complex function is the one that interprets abc notation.
+I will also implement another way to input notes, that could be something using a menu. I
+will think later about the interactive mode, first I have to program something that interprets
+abc.
+
+There are only going to be interpreted major and minor keys.
+
+The normal tempo is 128, this means that if L:1/4 and 
