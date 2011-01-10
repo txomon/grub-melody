@@ -12,8 +12,8 @@ struct nota{
 };
 
 struct papersheet{
-	int index, def_length, key, tempo,meter[2],num_notas;
-	char *title;
+	int index, def_length, tempo,meter[2],num_notas,tempomeasure;
+	char key[20],*title;
 	struct nota *notes;
 };
 

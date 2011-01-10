@@ -19,7 +19,12 @@ int main(int argc, char *args[])
 	int num;//number of papersheets
 	struct papersheet *partitura=NULL;
 	char *infilename;
-	if (argc)
+#ifdef DEBUG
+	fprintf(stderr,"[DEBUG] argc:%d\n",argc);
+	for(x=0;x<argc;x++)
+		fprintf(stderr,"[DEBUG] args[%d]=> %s\n",x,args[x]);
+#endif
+	if (argc>1)
 	{
 		for(x=1;x<argc;x++)//1st argument is tha path name
 		{
@@ -32,16 +37,23 @@ int main(int argc, char *args[])
 						break;
 					case 'i':
 						strcpy(infilename=calloc(strlen(args[x+1]),sizeof(char)),args[x+1]);
+						x++;
 						break;
 				}
 		}
-		num=readfile(infilename,partitura);
+		partitura=readfile(infilename,partitura,&num);
 	}
 	else
 	{
-
+		display_help(args[0]);
+		return 0;
 	}
-
+#ifdef DEBUG
+	fprintf(stderr,"\n[DEBUG] num of papersheets= %d\n",num);
+	fprintf(stderr,"[DEBUG] a ver...");
+#endif
+	if(partitura!=NULL)
+		createfile(partitura,num);
 	return 0;
 }
 
@@ -55,9 +67,9 @@ int main(int argc, char *args[])
  */
 
 
-void display_help()
+void display_help(char *basepath)
 {
-	printf("grub-melody: grub-melody [ -i <input_file> ] [-o <output_file>] [-h]");
+	printf("\ngrub-melody: %s [ -i <input_file> ] [-o <output_file>] [-h]\n",basepath);
 	printf("grub-melody is used as follows:\n");
 	printf("-h : To display this help");
 	printf("-i <file in> : To use that file as input\n");
@@ -82,12 +94,17 @@ float frecuency(int x)
 /*
  * Here is the most difficult part, reading abc notation and parse it to the papersheet structure
  */
-int readfile(char *filename,struct papersheet* partitura)
+struct papersheet* readfile(char *filename,struct papersheet* partitura,int *number)
 {
 	int num=0,a,b,super=0,nota,tempo;
 	char temp[100],tem[10],natural,flat,sharp,cuidao=0;
-	FILE *file=fopen(filename,"r");
-	while(fgets(temp,100,file)!=NULL)
+	FILE *fich=fopen(filename,"r");
+	if(fich==NULL)
+	{
+		fprintf(stderr,"File not found");
+		return NULL;
+	}
+	while(fgets(temp,99,fich)!=NULL)
 	{
 		switch(temp[0])
 		{
@@ -99,7 +116,6 @@ int readfile(char *filename,struct papersheet* partitura)
 				}
 				else
 				{
-					partitura[num].num_notas=super;
 					num++;
 					partitura=realloc(partitura, sizeof(struct papersheet)*(1+num));
 					super=0;
@@ -108,6 +124,8 @@ int readfile(char *filename,struct papersheet* partitura)
 				break;
 			case 'T':
 				strcpy(partitura[num].title=calloc(sizeof(char),strlen(&temp[2])+1),&temp[2]);
+				if(partitura[num].title[strlen(partitura[num].title)-1]=='\n')
+					partitura[num].title[strlen(partitura[num].title)-1]='\0';
 				break;
 			case 'M':
 				sscanf(temp,"M:%d/%d",&a,&b);
@@ -121,55 +139,17 @@ int readfile(char *filename,struct papersheet* partitura)
 				sscanf(temp,"Q:%s",tem);
 				if(strstr(tem,"="))
 				{
-					sscanf(tem,"%d=1/%d",&partitura[num].tempo,&a);
-					cuidao=1;
+					sscanf(tem,"%d=1/%d",&partitura[num].tempo,&partitura[num].tempomeasure);
 				}
 				else
-					sscanf(tem,"%d",&partitura[num].tempo);
-			case 'K':
-				sscanf(temp,"K:%s",tem);
-				switch(tem[0])
 				{
-					case 'A':
-						if(tem[1]=='m'||strstr(tem,"min")!=NULL)
-							partitura[num].key=0;
-						else
-							partitura[num].key=1;
-
-					case 'B':
-						if(tem[1]=='m'||strstr(tem,"min")!=NULL)
-							partitura[num].key=2;
-						else
-							partitura[num].key=3;
-					case 'C':
-						if(tem[1]=='m'||strstr(tem,"min")!=NULL)
-							partitura[num].key=4;
-						else
-							partitura[num].key=5;
-					case 'D':
-						if(tem[1]=='m'||strstr(tem,"min")!=NULL)
-							partitura[num].key=6;
-						else
-							partitura[num].key=7;
-
-					case 'E':
-						if(tem[1]=='m'||strstr(tem,"min")!=NULL)
-							partitura[num].key=8;
-						else
-							partitura[num].key=9;
-
-					case 'F':
-						if(tem[1]=='m'||strstr(tem,"min")!=NULL)
-							partitura[num].key=10;
-						else
-							partitura[num].key=11;
-
-					case 'G':
-						if(tem[1]=='m'||strstr(tem,"min")!=NULL)
-							partitura[num].key=12;
-						else
-							partitura[num].key=13;
+					sscanf(tem,"%d",&partitura[num].tempo);
+					partitura[num].tempomeasure=partitura[num].def_length;
 				}
+
+			case 'K':
+				sscanf(temp,"K:%s",partitura[num].key);
+
 				break;
 			default:
 				for(a=0;temp[a]!=0&&temp[a]!='\n';a++)
@@ -246,27 +226,42 @@ int readfile(char *filename,struct papersheet* partitura)
 					{
 						partitura[num].notes=realloc(partitura[num].notes,sizeof(struct nota)*(super+1));
 						partitura[num].notes[super].duracion=tempo;
-						if(natural==0)
-						{
-							if(sharp)
-							{
-								partitura[num].notes[super].nota=nota+sharp;
-								sharp=0;
-							}
-							if(flat)
-							{
-								partitura[num].notes[super].nota=nota+sharp;
-								flat=0;
-							}
-						}
-						super++;
+						partitura[num].notes[super].nota=nota+sharp+flat;
+						partitura[num].num_notas=++super;
 						nota=0;
 						tempo=128;
+						sharp=0;
+						nota=0;
+						flat=0;
 					}
 				}
 
 		}
 	}
-	fclose(file);
-	return num;
+	fclose(fich);
+	*number=num+1;
+	return partitura;
+}
+
+
+/*
+ * And now comes writing the file, where I just have to make the conversion to Hz and time.
+ */
+
+void createfile(struct papersheet* partitura,int num)
+{
+	int x,y,basetempo;
+	FILE *fich;
+
+	for(x=0;x<num;x++)
+	{
+		fich=fopen(partitura[x].title,"w");
+		basetempo=partitura[x].tempo*128*(partitura[x].def_length/partitura[x].tempomeasure);
+		fprintf(fich,"%d ",basetempo);
+		for(y=0;y<partitura[x].num_notas;y++)
+		{
+			fprintf(fich,"%d %d ",(int)frecuency(partitura[x].notes[y].nota),partitura[x].notes[y].duracion);
+		}
+		fclose(fich);
+	}
 }

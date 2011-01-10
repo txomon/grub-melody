@@ -13,4 +13,5 @@ abc.
 
 There are only going to be interpreted major and minor keys.
 
-The normal tempo is 128, this means that if L:1/4 and 
+The normal tempo is 128, this means that if L:1/4 and Q: 200 => 128 is the time for a 1/4 so 
+tempo will be duration*200 and everything will be calibrated
