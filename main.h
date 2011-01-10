@@ -9,9 +9,10 @@
 #define MAIN_H_
 
 #include "structures.h"
-#include "frecuency.h"
+#include "defines.h"
 	void display_help();
 	float frecuency(int);
 	struct papersheet* readfile(char *,struct papersheet*,int*);
 	void createfile(struct papersheet*, int);
+	int checknotechange(char[]);
 #endif /* MAIN_H_ */

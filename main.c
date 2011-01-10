@@ -97,7 +97,7 @@ float frecuency(int x)
 struct papersheet* readfile(char *filename,struct papersheet* partitura,int *number)
 {
 	int num=0,a,b,super=0,nota,tempo;
-	char temp[100],tem[10],natural,flat,sharp,cuidao=0;
+	char temp[100],tem[10],natural,flat,sharp;
 	FILE *fich=fopen(filename,"r");
 	if(fich==NULL)
 	{
@@ -124,8 +124,8 @@ struct papersheet* readfile(char *filename,struct papersheet* partitura,int *num
 				break;
 			case 'T':
 				strcpy(partitura[num].title=calloc(sizeof(char),strlen(&temp[2])+1),&temp[2]);
-				if(partitura[num].title[strlen(partitura[num].title)-1]=='\n')
-					partitura[num].title[strlen(partitura[num].title)-1]='\0';
+				if(partitura[num].title[strlen(partitura[num].title)-1]<='A'||(partitura[num].title[strlen(partitura[num].title)-1]>='Z'&&partitura[num].title[strlen(partitura[num].title)-1]<='a')||partitura[num].title[strlen(partitura[num].title)-1]>='z')
+					partitura[num].title[strlen(partitura[num].title)-2]='\0';
 				break;
 			case 'M':
 				sscanf(temp,"M:%d/%d",&a,&b);
@@ -146,13 +146,13 @@ struct papersheet* readfile(char *filename,struct papersheet* partitura,int *num
 					sscanf(tem,"%d",&partitura[num].tempo);
 					partitura[num].tempomeasure=partitura[num].def_length;
 				}
-
+				break;
 			case 'K':
 				sscanf(temp,"K:%s",partitura[num].key);
 
 				break;
 			default:
-				for(a=0;temp[a]!=0&&temp[a]!='\n';a++)
+				for(a=0,nota=0,tempo=128;temp[a]!=0&&temp[a]!='\n';a++)
 				{
 					switch(temp[a])
 					{
@@ -222,7 +222,10 @@ struct papersheet* readfile(char *filename,struct papersheet* partitura,int *num
 							tempo*=(temp[a]-'0');
 							break;
 					}
-					if((temp[a+1]>='A'&&temp[a+1]<='Z')||(temp[a+1]>='a'&&temp[a+1]<='z')||temp[a+1]=='|')
+					if(checknotechange(&temp[a])
+		//				((temp[a]!='^'&&temp[a]!='_')&&((temp[a+1]>='A'&&temp[a+1]<='Z')||(temp[a+1]>='a'&&temp[a+1]<='z')||temp[a+1]=='_'||temp[a+1]=='^'))
+
+					)
 					{
 						partitura[num].notes=realloc(partitura[num].notes,sizeof(struct nota)*(super+1));
 						partitura[num].notes[super].duracion=tempo;
@@ -264,4 +267,40 @@ void createfile(struct papersheet* partitura,int num)
 		}
 		fclose(fich);
 	}
+}
+
+/*
+ * Althought I didn't prevent this function, I finally have to admit that I need it, and don't discard adding another
+ * that makes the same, but with compasses.
+ */
+
+int checknotechange(char array[])
+{
+	char char1[]={array[0],0},char2[]={array[1],0};
+
+	if(strpbrk(char1,VALID_ACCIDENTAL)&&strpbrk(char2,VALID_NOTE))
+		return 0;
+	if(strpbrk(char1,VALID_NOTE)&&strpbrk(char2,VALID_ACCIDENTAL))
+		return 1;
+	if(strpbrk(char1,VALID_NOTE)&&strpbrk(char2,VALID_OCTAVE))
+		return 0;
+	if(strpbrk(char1,VALID_NOTE)&&strpbrk(char2,VALID_LENGTH))
+		return 0;
+	if(strpbrk(char1,VALID_NOTE)&&strpbrk(char2,VALID_NOTE))
+		return 1;
+	if(strpbrk(char1,VALID_OCTAVE)&&strpbrk(char2,VALID_LENGTH))
+		return 0;
+	if(strpbrk(char1,VALID_OCTAVE)&&strpbrk(char2,VALID_ACCIDENTAL))
+		return 1;
+	if(strpbrk(char1,VALID_OCTAVE)&&strpbrk(char2,VALID_NOTE))
+		return 1;
+	if(strpbrk(char1,VALID_LENGTH)&&strpbrk(char2,VALID_ACCIDENTAL))
+		return 1;
+	if(strpbrk(char1,VALID_LENGTH)&&strpbrk(char2,VALID_NOTE))
+		return 1;
+	if(strpbrk(char1,HAVE_TO_END))
+		return 0;
+	if(strpbrk(char2,HAVE_TO_END))
+		return 1;
+	return 1;
 }
